@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>The Population Remix | 1950–2020</title>
+
+<!-- Google Fonts: Lobster -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="citypop.js"></script>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: linear-gradient(135deg,#24145F 0%,#5935A8 55%,#B02EAA 100%); font-family: Verdana,sans-serif; color:#24145F; }
+.page-wrapper { max-width:1350px; margin:25px auto; padding:0 24px; }
+.map-header { background:#24145F; color:#fff; padding:28px 35px; border:3px solid white; border-bottom:5px solid #35E5E5; border-radius:14px 14px 0 0; }
+.eyebrow { color:#35E5E5; font-size:11px; letter-spacing:3px; font-weight:bold; }
+
+.map-header h1 {
+    font-family: 'Lobster', cursive;
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: normal;
+    color: #FFFFFF;
+    letter-spacing: 1px;
+    margin: 12px 0 4px;
+
+    text-shadow:
+        3px 3px 0 #FF39B6,
+        5px 5px 12px rgba(255, 57, 182, 0.45);
+}
+
+.map-header p { color:#D8F3F3; margin:0; font-size:14px; }
+.map-frame { border:5px solid white; border-top:none; border-bottom:none; background:white; }
+#map { width:100%; height:65vh; min-height:450px; }
+.map-footer { background:#24145F; color:#35E5E5; padding:16px 25px; display:flex; justify-content:space-between; gap:15px; font-size:11px; border:3px solid white; border-top:4px solid #FF39B6; border-radius:0 0 14px 14px; }
+.time-control { display:flex; align-items:center; gap:12px; padding:12px 18px; background:rgba(255,255,255,.97); border:2px solid #24145F; border-radius:10px; box-shadow:0 3px 15px rgba(36,20,95,.3); font:14px Verdana,sans-serif; }
+.range-slider { accent-color:#FF39B6; cursor:pointer; width:170px; }
+.temporal-legend { color:#24145F; font-size:18px; font-weight:bold; min-width:48px; }
+.play-button { background:#24145F; color:white; border:2px solid #35E5E5; border-radius:6px; padding: 7px 18px; font: normal 19px 'Lobster', cursive; cursor:pointer; transition:.2s; }
+.play-button:hover { background:#FF39B6; border-color:white; }
+.leaflet-popup-content-wrapper { background:white; border:2px solid #35E5E5; border-radius:12px; box-shadow:0 4px 18px rgba(36,20,95,.3); }
+.leaflet-popup-content {
+    margin: 12px 16px;
+    font-family: Verdana, sans-serif;
+}
+.leaflet-popup-tip { background:white; }
+
+
+.popup-city {
+    font-family: 'Lobster', cursive;
+    color: #24145F;
+    font-size: 23px;
+    font-weight: normal;
+    margin-bottom: 5px;
+}
+
+
+.popup-year {
+    color: #E00090;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.popup-population {
+    color: #24145F;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 6px;
+}
+
+.popup-caption { color:#526477; font-size:11px; margin-top:4px; }
+.population-legend { background:rgba(255,255,255,.97); border:2px solid #24145F; border-radius:10px; padding:12px 15px; box-shadow:0 3px 15px rgba(36,20,95,.3); font:12px Verdana,sans-serif; color:#24145F; }
+.population-legend h3 { margin:0 0 5px; font-size:13px; color:#24145F; }
+.population-legend .legend-subtitle { margin:0 0 8px; color:#526477; font-size:10px; }
+.legend-row { display:flex; align-items:center; gap:9px; margin:5px 0; }
+.legend-circle { flex-shrink:0; display:inline-block; background:rgba(255,57,182,.65); border:2px solid white; outline:1px solid #C5007E; border-radius:50%; }
+.legend-label { white-space:nowrap; }
+@media (max-width:600px) {
+ .page-wrapper { margin:10px auto; padding:0 10px; }
+ .map-header { padding:20px; }
+ .map-header h1 { font-size:27px; }
+ #map { height:65vh; min-height:450px; }
+ .map-footer { flex-direction:column; }
+ .time-control { gap:6px; padding:8px; }
+ .range-slider { width:90px; }
+ .population-legend { padding:8px; font-size:10px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+<header class="map-header">
+    <div class="eyebrow">
+        ✦ AN INTERACTIVE POPULATION ATLAS ✦
+    </div>
+
+    <h1>The Population Remix</h1>
+</header>
+
+<main class="map-frame"><div id="map"></div></main>
+<footer class="map-footer"><span>15 U.S. Cities | 1950–2020 Census Data</span><span>Interactive Cartography • Lab 7 ✦</span></footer>
+</div>
+<script>
+var map = L.map('map').setView([39,-98],4);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+ attribution:'Tiles &copy; Esri', maxZoom:19
+}).addTo(map);
+
+var cities;
+var slider;
+var animationTimer = null;
+var playButton;
+
+function processData(geojson) {
+ var timestamps = [];
+ var min = Infinity;
+ var max = -Infinity;
+ geojson.features.forEach(function(feature) {
+  var props = feature.properties;
+  Object.keys(props).forEach(function(attribute) {
+   if (/^(19|20)\d{2}$/.test(attribute)) {
+    if (timestamps.indexOf(attribute) === -1) timestamps.push(attribute);
+    var value = Number(props[attribute]);
+    if (Number.isFinite(value)) {
+     min = Math.min(min,value);
+     max = Math.max(max,value);
+    }
+   }
+  });
+ });
+ timestamps.sort(function(a,b){ return Number(a)-Number(b); });
+ return {timestamps:timestamps,min:min,max:max};
+}
+
+function calcPropRadius(population) {
+ var scaleFactor = .001;
+ var area = population * scaleFactor;
+ return Math.sqrt(area/Math.PI);
+}
+
+function createPropSymbols(timestamps,geojson) {
+ cities = L.geoJSON(geojson, {
+  pointToLayer:function(feature,latlng) {
+   return L.circleMarker(latlng, {
+    fillColor:'#FF39B6',color:'#FFFFFF',weight:2,fillOpacity:.65
+   }).on({
+    mouseover:function() {
+     this.openPopup();
+     this.setStyle({fillColor:'#35E5E5',color:'#24145F',fillOpacity:.85});
+    },
+    mouseout:function() {
+     this.closePopup();
+     this.setStyle({fillColor:'#FF39B6',color:'#FFFFFF',fillOpacity:.65});
+    }
+   });
+  }
+ }).addTo(map);
+ updatePropSymbols(timestamps[0]);
+}
+
+function updatePropSymbols(timestamp) {
+ cities.eachLayer(function(layer) {
+  var props = layer.feature.properties;
+  var population = Number(props[timestamp]);
+  var radius = calcPropRadius(population);
+  var popupContent =
+   '<div class="popup-city">'+props.name+'</div>'+
+   '<div class="popup-year">Census Year: '+timestamp+'</div>'+
+   '<div class="popup-population">'+population.toLocaleString()+'</div>'+
+   '<div class="popup-caption">Total city population</div>';
+  layer.setRadius(radius);
+  layer.bindPopup(popupContent,{offset:new L.Point(0,-radius)});
+ });
+}
+
+function createSliderUI(timestamps) {
+ var control = L.control({position:'bottomleft'});
+ control.onAdd = function() {
+  var container = L.DomUtil.create('div','time-control');
+  L.DomEvent.disableClickPropagation(container);
+  L.DomEvent.disableScrollPropagation(container);
+  slider = L.DomUtil.create('input','range-slider',container);
+  slider.type='range';slider.min=0;slider.max=timestamps.length-1;
+  slider.step=1;slider.value=0;
+  slider.setAttribute('aria-label','Census year');
+  var label = L.DomUtil.create('output','temporal-legend',container);
+  label.textContent=timestamps[0];
+  slider.addEventListener('input',function() {
+   stopAnimation();
+   showTimestamp(timestamps[Number(slider.value)]);
+  });
+  return container;
+ };
+ control.addTo(map);
+}
+
+function showTimestamp(timestamp) {
+ updatePropSymbols(timestamp);
+ document.querySelector('.temporal-legend').textContent=timestamp;
+}
+
+function stopAnimation() {
+ if (animationTimer !== null) clearInterval(animationTimer);
+ animationTimer=null;
+ if (playButton) playButton.textContent='Play';
+}
+
+function createPlayButton(timestamps) {
+ playButton = L.DomUtil.create('button','play-button');
+ playButton.type='button';
+ playButton.textContent='Play';
+ document.querySelector('.time-control').prepend(playButton);
+ playButton.addEventListener('click',function() {
+  if (animationTimer !== null) {stopAnimation();return;}
+  if (Number(slider.value)>=timestamps.length-1) {
+   slider.value=0;
+   showTimestamp(timestamps[0]);
+  }
+  playButton.textContent='Pause';
+  animationTimer=setInterval(function() {
+   var next=Number(slider.value)+1;
+   if (next>=timestamps.length) {stopAnimation();return;}
+   slider.value=next;
+   showTimestamp(timestamps[next]);
+   if (next===timestamps.length-1) stopAnimation();
+  },1000);
+ });
+}
+
+function createLegend() {
+ var legend = L.control({position:'bottomright'});
+ legend.onAdd = function() {
+  var container = L.DomUtil.create('div','population-legend');
+  L.DomEvent.disableClickPropagation(container);
+  L.DomEvent.disableScrollPropagation(container);
+  var title = document.createElement('h3');
+  title.textContent='POPULATION SIZE';
+  container.appendChild(title);
+  var subtitle = document.createElement('p');
+  subtitle.className='legend-subtitle';
+  subtitle.textContent='Circle area represents population';
+  container.appendChild(subtitle);
+  [8000000,4000000,1000000].forEach(function(value) {
+   var row=document.createElement('div');
+   row.className='legend-row';
+   var circle=document.createElement('span');
+   circle.className='legend-circle';
+   var diameter=2*calcPropRadius(value);
+   circle.style.width=diameter+'px';
+   circle.style.height=diameter+'px';
+   var label=document.createElement('span');
+   label.className='legend-label';
+   label.textContent=value.toLocaleString();
+   row.appendChild(circle);
+   row.appendChild(label);
+   container.appendChild(row);
+  });
+  return container;
+ };
+ legend.addTo(map);
+}
+
+var info=processData(data);
+createPropSymbols(info.timestamps,data);
+createSliderUI(info.timestamps);
+createPlayButton(info.timestamps);
+createLegend();
+</script>
+</body>
+</html>
